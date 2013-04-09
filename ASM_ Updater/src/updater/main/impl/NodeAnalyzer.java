@@ -3,8 +3,11 @@ package updater.main.impl;
 import java.util.ListIterator;
 
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.MethodNode;
 
 import updater.main.generic.AbstractAnalyzer;
 
@@ -25,7 +28,7 @@ public class NodeAnalyzer extends AbstractAnalyzer {
 					longType++;
 			}
 		}
-		
+
 		return ownType == 2 && longType ==1;
 	}
 
@@ -40,6 +43,33 @@ public class NodeAnalyzer extends AbstractAnalyzer {
 					System.out.println("UID Field: " + fn.name);
 			}
 		}
+		String previousName = "";
+		ListIterator<MethodNode> mnIt = node.methods.listIterator();
+		methodIterator: while(mnIt.hasNext()) {
+			MethodNode mn = mnIt.next();
+			if((mn.access & Opcodes.ACC_STATIC) == 0) {
+				ListIterator<AbstractInsnNode> ainIt = mn.instructions.iterator();
+				while(ainIt.hasNext()) {
+					AbstractInsnNode ain = ainIt.next();
+					if(ain instanceof FieldInsnNode) {
+						previousName = ((FieldInsnNode) ain).name;
+						break methodIterator;
+					}
+				}
+			}
+		}
+		System.out.println("Previous Field: " + previousName);
+		if(previousName.length() > 0) {
+			fnIt = node.fields.listIterator();
+			while(fnIt.hasNext()) {
+				FieldNode fn = fnIt.next();
+				if((fn.access & Opcodes.ACC_STATIC) == 0) {
+					if(fn.desc.equals(String.format("L%s;", node.name))
+							&& !fn.name.equals(previousName)) {
+						System.out.println("Next Field: " + fn.name);
+					}
+				}
+			}
+		}
 	}
-
 }
